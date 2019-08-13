@@ -1,2 +1,3 @@
 # htmlite
-A simple library to parse html to JS object
+
+A quick & tiny library to parse HTML string to JS object
