@@ -39,7 +39,7 @@ enum State {
 
 interface Token {
   type: Type;
-  data: Record<string, any>;
+  data?: Record<string, any> | string;
 }
 
 function isLetter(t: string) {
@@ -84,7 +84,6 @@ export default class Tokenizer {
       this.next();
     }
 
-    console.log(this.token);
     return this.token;
   }
 
@@ -158,7 +157,9 @@ export default class Tokenizer {
   }
 
   private addToken(type: Type, data?: any) {
-    this.token.push({ type, data });
+    const token: Token = { type };
+    if (data !== undefined) token.data = data;
+    this.token.push(token);
     this.start = -1; // reset section start
   }
 
