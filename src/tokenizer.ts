@@ -1,8 +1,12 @@
 export enum Type {
   DOCTYPE = 'DOCTYPE',
-  OPEN_TAG = 'TAG_OPEN',
-  CLOSE_TAG = 'TAG_CLOSE',
-  ATTRIBUTE = 'ATTRIBUTE',
+  OPEN_TAG_START = 'OPEN_TAG_START',
+  OPEN_TAG_END = 'OPEN_TAG_END',
+  SELF_CLOSE_TAG_END = 'SELF_CLOSE_TAG_END',
+  CLOSE_TAG = 'CLOSE_TAG',
+  ATTRIBUTE_NAME = 'ATTRIBUTE_NAME',
+  ATTRIBUTE_VALUE_START = 'ATTRIBUTE_VALUE_START',
+  ATTRIBUTE_VALUE_END = 'ATTRIBUTE_VALUE_END',
   TEXT = 'TEXT',
   ENTITY = 'ENTITY',
   COMMENT = 'COMMENT',
@@ -15,23 +19,20 @@ enum State {
   TagOpen,
   EndTagOpen,
   TagName,
+  TagClose,
+  SelfClosing,
   BeforeAttributeName,
   AfterAttributeName,
   AttributeName,
   BeforeAttributeValue,
-  AttributeValue,
-  AfterAttributeValue,
-  SelfClosingStartTag,
+  AttributeValueSingleQuoted,
+  AttributeValueDoubleQuoted,
+  AttributeValueUnquoted,
+  AfterAttributeValueQuoted,
   CharacterReference,
   MarkupDeclarationOpen,
-  CommentStart,
-  CommentStartDash,
   Comment,
-  CommentEndDash,
-  CommentEnd,
   CDATASection,
-  CDATASectionBracket,
-  CDATASectionEnd,
   Doctype,
   Processing
 }
@@ -74,6 +75,7 @@ export default class Tokenizer {
     // reset
     this.state = State.Data;
     this.pos = -1;
+    this.start = -1;
     this.cur = '';
     this.token = [];
     this.source = html;
@@ -82,6 +84,7 @@ export default class Tokenizer {
       this.next();
     }
 
+    console.log(this.token);
     return this.token;
   }
 
@@ -95,6 +98,9 @@ export default class Tokenizer {
         break;
       case State.TagOpen:
         this.onTagOpen();
+        break;
+      case State.TagClose:
+        this.onTagClose();
         break;
       case State.EndTagOpen:
         this.onEndTagOpen();
@@ -114,14 +120,20 @@ export default class Tokenizer {
       case State.BeforeAttributeValue:
         this.onBeforeAttributeValue();
         break;
-      case State.AttributeValue:
-        this.onAttributeValue();
+      case State.AttributeValueSingleQuoted:
+        this.onAttributeValueSingleQuoted();
         break;
-      case State.AfterAttributeValue:
-        this.onAfterAttributeValue();
+      case State.AttributeValueDoubleQuoted:
+        this.onAttributeValueDoubleQuoted();
         break;
-      case State.SelfClosingStartTag:
-        this.onSelfClosingStartTag();
+      case State.AttributeValueUnquoted:
+        this.onAttributeValueUnquoted();
+        break;
+      case State.AfterAttributeValueQuoted:
+        this.onAfterAttributeValueQuoted();
+        break;
+      case State.SelfClosing:
+        this.onSelfClosing();
         break;
       case State.CharacterReference:
         this.onCharacterReference();
@@ -129,29 +141,11 @@ export default class Tokenizer {
       case State.MarkupDeclarationOpen:
         this.onMarkupDeclarationOpen();
         break;
-      case State.CommentStart:
-        this.onCommentStart();
-        break;
-      case State.CommentStartDash:
-        this.onCommentStartDash();
-        break;
       case State.Comment:
         this.onComment();
         break;
-      case State.CommentEndDash:
-        this.onCommentEndDash();
-        break;
-      case State.CommentEnd:
-        this.onCommentEnd();
-        break;
       case State.CDATASection:
         this.onCDATASection();
-        break;
-      case State.CDATASectionBracket:
-        this.onCDATASectionBracket();
-        break;
-      case State.CDATASectionEnd:
-        this.onCDATASectionEnd();
         break;
       case State.Doctype:
         this.onDoctype();
@@ -163,13 +157,13 @@ export default class Tokenizer {
     }
   }
 
-  private addToken(type: Type, data: any) {
+  private addToken(type: Type, data?: any) {
     this.token.push({ type, data });
     this.start = -1; // reset section start
   }
 
-  private getSection() {
-    return this.source.substring(this.start, this.pos);
+  private getSection(end = this.pos) {
+    return this.source.substring(this.start, end);
   }
 
   private onData() {
@@ -194,32 +188,204 @@ export default class Tokenizer {
     const { cur } = this;
     if (cur === '!') {
       this.state = State.MarkupDeclarationOpen;
-    }
-    if (cur === '/') {
-      this.state = State.EndTagOpen;
-    }
-    if (isLetter(cur)) {
+    } else if (cur === '/') {
+      this.state = State.TagClose;
+    } else if (isLetter(cur)) {
+      this.pos -= 1;
       this.state = State.TagName;
+    } else {
+      // error
     }
   }
 
-  private onEndTagOpen() {}
+  private onTagClose() {
+    const { cur, pos } = this;
+    if (isLetter(cur)) {
+      if (this.start === -1) this.start = pos;
+    } else if (cur === '>') {
+      this.addToken(Type.CLOSE_TAG, { tag: this.getSection() });
+      this.state = State.Data;
+    } else {
+      // error
+    }
+  }
 
-  private onTagName() {}
+  private onTagName() {
+    const { cur, pos } = this;
+    if (isWhiteSpace(cur)) {
+      this.addToken(Type.OPEN_TAG_START, { tag: this.getSection() });
+      this.state = State.BeforeAttributeName;
+    } else if (cur === '/') {
+      this.addToken(Type.OPEN_TAG_START, { tag: this.getSection() });
+      this.state = State.SelfClosing;
+    } else if (cur === '>') {
+      this.addToken(Type.OPEN_TAG_START, { tag: this.getSection() });
+      this.pos -= 1;
+      this.state = State.EndTagOpen;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
-  private onBeforeAttributeName() {}
+  private onEndTagOpen() {
+    const { cur } = this;
+    if (cur === '>') {
+      this.addToken(Type.OPEN_TAG_END);
+      this.state = State.Data;
+    } else {
+      // error
+    }
+  }
 
-  private onAfterAttributeName() {}
+  private onBeforeAttributeName() {
+    const { cur } = this;
+    if (isWhiteSpace(cur)) {
+      return;
+    } else if (cur === '/' || cur === '>') {
+      this.pos -= 1;
+      this.state = State.AfterAttributeName;
+    } else if (cur === '=') {
+      // error
+    } else {
+      this.pos -= 1;
+      this.state = State.AttributeName;
+    }
+  }
 
-  private onAttributeName() {}
+  private onAttributeName() {
+    const { cur, pos } = this;
+    if (cur === '/' || cur === '>' || isWhiteSpace(cur)) {
+      this.pos -= 1;
+      this.addToken(Type.ATTRIBUTE_NAME, { name: this.getSection() });
+      this.state = State.AfterAttributeName;
+    } else if (cur === '=') {
+      this.addToken(Type.ATTRIBUTE_NAME, { name: this.getSection() });
+      this.state = State.BeforeAttributeValue;
+    } else if (cur === '"' || cur === "'" || cur === '<') {
+      // error
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
-  private onBeforeAttributeValue() {}
+  private onAfterAttributeName() {
+    const { cur } = this;
+    if (isWhiteSpace(cur)) {
+      return;
+    } else if (cur === '/') {
+      this.state = State.SelfClosing;
+    } else if (cur === '=') {
+      this.state = State.BeforeAttributeValue;
+    } else if (cur === '>') {
+      this.state = State.Data;
+    } else {
+      this.pos -= 1;
+      this.state = State.AttributeName;
+    }
+  }
 
-  private onAttributeValue() {}
+  private onBeforeAttributeValue() {
+    const { cur } = this;
+    if (isWhiteSpace(cur)) {
+      return;
+    } else if (cur === '"') {
+      this.addToken(Type.ATTRIBUTE_VALUE_START);
+      this.state = State.AttributeValueDoubleQuoted;
+    } else if (cur === "'") {
+      this.addToken(Type.ATTRIBUTE_VALUE_START);
+      this.state = State.AttributeValueSingleQuoted;
+    } else if (cur === '>') {
+      // error
+    } else {
+      this.addToken(Type.ATTRIBUTE_VALUE_START);
+      this.pos -= 1;
+      this.state = State.AttributeValueUnquoted;
+    }
+  }
 
-  private onAfterAttributeValue() {}
+  private onAttributeValueSingleQuoted() {
+    const { cur, pos } = this;
+    if (cur === "'") {
+      this.addToken(Type.TEXT, this.getSection());
+      this.state = State.AfterAttributeValueQuoted;
+    } else if (cur === '&') {
+      this.addToken(Type.TEXT, this.getSection());
+      this.state = State.CharacterReference;
+      this.returnState = State.AttributeValueSingleQuoted;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
+  private onAttributeValueDoubleQuoted() {
+    const { cur, pos } = this;
+    if (cur === '"') {
+      this.addToken(Type.TEXT, this.getSection());
+      this.state = State.AfterAttributeValueQuoted;
+    } else if (cur === '&') {
+      this.addToken(Type.TEXT, this.getSection());
+      this.state = State.CharacterReference;
+      this.returnState = State.AttributeValueDoubleQuoted;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
-  private onSelfClosingStartTag() {}
+  private onAttributeValueUnquoted() {
+    const { cur, pos } = this;
+    if (isWhiteSpace(cur)) {
+      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.ATTRIBUTE_VALUE_END);
+      this.state = State.BeforeAttributeName;
+    } else if (cur === '&') {
+      this.addToken(Type.TEXT, this.getSection());
+      this.state = State.CharacterReference;
+      this.returnState = State.AttributeValueUnquoted;
+    } else if (cur === '>') {
+      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.ATTRIBUTE_VALUE_END);
+      this.pos -= 1;
+      this.state = State.EndTagOpen;
+    } else if (
+      cur === '"' ||
+      cur === "'" ||
+      cur === '<' ||
+      cur === '=' ||
+      cur === '`'
+    ) {
+      // error
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
+
+  private onAfterAttributeValueQuoted() {
+    const { cur } = this;
+    if (isWhiteSpace(cur)) {
+      this.addToken(Type.ATTRIBUTE_VALUE_END);
+      this.state = State.BeforeAttributeName;
+    } else if (cur === '/') {
+      this.addToken(Type.ATTRIBUTE_VALUE_END);
+      this.state = State.SelfClosing;
+    } else if (cur === '>') {
+      this.addToken(Type.ATTRIBUTE_VALUE_END);
+      this.pos -= 1;
+      this.state = State.EndTagOpen;
+    } else {
+      this.pos -= 1;
+      this.state = State.BeforeAttributeName;
+    }
+  }
+
+  private onSelfClosing() {
+    const { cur } = this;
+    if (cur === '>') {
+      this.addToken(Type.SELF_CLOSE_TAG_END);
+      this.state = State.Data;
+    } else {
+      this.pos -= 1;
+      this.state = State.BeforeAttributeName;
+    }
+  }
 
   private onCharacterReference() {
     const { cur, pos } = this;
@@ -239,25 +405,54 @@ export default class Tokenizer {
     }
   }
 
-  private onMarkupDeclarationOpen() {}
+  private onMarkupDeclarationOpen() {
+    const { pos, source } = this;
+    if (source.substring(pos, pos + 2) === '--') {
+      this.state = State.Comment;
+      this.pos += 1;
+    } else if (source.substring(pos, pos + 7).toLowerCase() === 'doctype') {
+      this.state = State.Doctype;
+      this.pos += 6;
+    } else if (source.substring(pos, pos + 7).toLowerCase() === '[cdata[') {
+      this.state = State.CDATASection;
+      this.pos += 6;
+    } else {
+      // error
+    }
+  }
 
-  private onCommentStart() {}
+  private onComment() {
+    const { pos } = this;
+    if (this.source.substring(pos, pos + 3) === '-->') {
+      this.addToken(Type.COMMENT, this.getSection());
+      this.pos += 2;
+      this.state = State.Data;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
-  private onCommentStartDash() {}
+  private onCDATASection() {
+    const { pos } = this;
+    if (this.source.substring(pos, pos + 3) === ']]>') {
+      this.addToken(Type.CDATA, this.getSection());
+      this.pos += 2;
+      this.state = State.Data;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
-  private onComment() {}
-
-  private onCommentEndDash() {}
-
-  private onCommentEnd() {}
-
-  private onCDATASection() {}
-
-  private onCDATASectionBracket() {}
-
-  private onCDATASectionEnd() {}
-
-  private onDoctype() {}
+  private onDoctype() {
+    const { cur, pos } = this;
+    if (cur === '>') {
+      this.addToken(Type.DOCTYPE, this.getSection());
+      this.start = -1;
+      this.state = State.Data;
+    } else {
+      if (this.start === -1) this.start = pos;
+    }
+  }
 
   private onProcessing() {}
 }

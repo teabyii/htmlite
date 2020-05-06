@@ -4,6 +4,9 @@ const tokenizer = new Tokenizer();
 
 test('doctype', () => {
   tokenizer.tokenize('<!DOCTYPE html>');
+  tokenizer.tokenize(
+    '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">'
+  );
 });
 
 test('comment', () => {
@@ -11,11 +14,23 @@ test('comment', () => {
 });
 
 test('tag', () => {
-  tokenizer.tokenize('<div class="box"></div>');
+  tokenizer.tokenize('<div></div>');
+  tokenizer.tokenize('<div><h1>hello world</h1></div>');
 });
 
 test('self-close', () => {
-  tokenizer.tokenize('<br class="seperator />');
+  tokenizer.tokenize('<br/>');
+  tokenizer.tokenize('<br />');
+});
+
+test('attribute', () => {
+  tokenizer.tokenize('<input type="checkbox"></input>');
+  tokenizer.tokenize(`<input type='text'></input>`);
+  tokenizer.tokenize(`<input type=text></input>`);
+  tokenizer.tokenize(`<input type="text" />`);
+  tokenizer.tokenize(`<input type='text' />`);
+  tokenizer.tokenize(`<input type=text />`);
+  tokenizer.tokenize(`<input type=text class="input" />`);
 });
 
 test('cdata', () => {
@@ -23,5 +38,22 @@ test('cdata', () => {
 });
 
 test('entity', () => {
-  console.log(tokenizer.tokenize('&nbsp;'));
+  tokenizer.tokenize('&nbsp;');
+});
+
+test('mixed', () => {
+  tokenizer.tokenize(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <link href="main.css" rel="stylesheet" />
+      </head>
+      <![CDATA[ hello tokenizer ]]>
+      <body class="spring" data-set="tokenizer">
+        <!-- comment -->
+        <h1>&nbsp;&nbsp;</h1>
+        <script src="/index.js"></script>
+      </body>
+    </html>
+  `);
 });
