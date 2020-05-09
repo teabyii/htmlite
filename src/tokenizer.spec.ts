@@ -1,23 +1,25 @@
-import Tokenizer, { Type } from './tokenizer';
+import { Tokenizer, Type } from './tokenizer';
 
 const tokenizer = new Tokenizer();
 
 test('doctype', () => {
   const t1 = tokenizer.tokenize('<!DOCTYPE html>');
-  expect(t1[0]).toEqual({ type: 'DOCTYPE', data: ' html' });
+  expect(t1[0]).toEqual({ type: 'DOCTYPE', data: { text: ' html' } });
   const t2 = tokenizer.tokenize(
     '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">'
   );
   expect(t2[0]).toEqual({
     type: 'DOCTYPE',
-    data:
-      ' HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"'
+    data: {
+      text:
+        ' HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"'
+    }
   });
 });
 
 test('comment', () => {
   const t1 = tokenizer.tokenize('<!-- hello world -->');
-  expect(t1[0]).toEqual({ type: 'COMMENT', data: ' hello world ' });
+  expect(t1[0]).toEqual({ type: 'COMMENT', data: { text: ' hello world ' } });
 });
 
 test('tag', () => {
@@ -33,7 +35,7 @@ test('tag', () => {
     { type: 'OPEN_TAG_END' },
     { type: 'OPEN_TAG_START', data: { tag: 'h1' } },
     { type: 'OPEN_TAG_END' },
-    { type: 'TEXT', data: 'hello world' },
+    { type: 'TEXT', data: { text: 'hello world' } },
     { type: 'CLOSE_TAG', data: { tag: 'h1' } },
     { type: 'CLOSE_TAG', data: { tag: 'div' } }
   ]);
@@ -58,7 +60,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'checkbox' },
+    { type: 'TEXT', data: { text: 'checkbox' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'OPEN_TAG_END' },
     { type: 'CLOSE_TAG', data: { tag: 'input' } }
@@ -68,7 +70,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'OPEN_TAG_END' },
     { type: 'CLOSE_TAG', data: { tag: 'input' } }
@@ -78,7 +80,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'OPEN_TAG_END' },
     { type: 'CLOSE_TAG', data: { tag: 'input' } }
@@ -88,7 +90,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'SELF_CLOSE_TAG_END' }
   ]);
@@ -97,7 +99,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'SELF_CLOSE_TAG_END' }
   ]);
@@ -106,7 +108,7 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'SELF_CLOSE_TAG_END' }
   ]);
@@ -115,11 +117,11 @@ test('attribute', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'input' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'type' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'text' },
+    { type: 'TEXT', data: { text: 'text' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'ATTRIBUTE_NAME', data: { name: 'class' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'input' },
+    { type: 'TEXT', data: { text: 'input' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'SELF_CLOSE_TAG_END' }
   ]);
@@ -127,12 +129,12 @@ test('attribute', () => {
 
 test('cdata', () => {
   const t1 = tokenizer.tokenize('<![CDATA[hello world]]>');
-  expect(t1).toEqual([{ type: 'CDATA', data: 'hello world' }]);
+  expect(t1).toEqual([{ type: 'CDATA', data: { text: 'hello world' } }]);
 });
 
 test('entity', () => {
   const t2 = tokenizer.tokenize('&nbsp;');
-  expect(t2).toEqual([{ type: 'ENTITY', data: 'nbsp' }]);
+  expect(t2).toEqual([{ type: 'ENTITY', data: { text: 'nbsp' } }]);
 });
 
 test('mixed', () => {
@@ -150,9 +152,9 @@ test('mixed', () => {
       </body>
     </html>
   `);
-  t1 = t1.filter(n => n.type !== Type.TEXT || n.data?.trim() !== '');
+  t1 = t1.filter(n => n.type !== Type.TEXT || n.data?.text?.trim() !== '');
   expect(t1).toEqual([
-    { type: 'DOCTYPE', data: ' html' },
+    { type: 'DOCTYPE', data: { text: ' html' } },
     { type: 'OPEN_TAG_START', data: { tag: 'html' } },
     { type: 'OPEN_TAG_END' },
     { type: 'OPEN_TAG_START', data: { tag: 'head' } },
@@ -160,35 +162,35 @@ test('mixed', () => {
     { type: 'OPEN_TAG_START', data: { tag: 'link' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'href' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'main.css' },
+    { type: 'TEXT', data: { text: 'main.css' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'ATTRIBUTE_NAME', data: { name: 'rel' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'stylesheet' },
+    { type: 'TEXT', data: { text: 'stylesheet' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'SELF_CLOSE_TAG_END' },
     { type: 'CLOSE_TAG', data: { tag: 'head' } },
-    { type: 'CDATA', data: ' hello tokenizer ' },
+    { type: 'CDATA', data: { text: ' hello tokenizer ' } },
     { type: 'OPEN_TAG_START', data: { tag: 'body' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'class' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'spring' },
+    { type: 'TEXT', data: { text: 'spring' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'ATTRIBUTE_NAME', data: { name: 'data-set' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: 'tokenizer' },
+    { type: 'TEXT', data: { text: 'tokenizer' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'OPEN_TAG_END' },
-    { type: 'COMMENT', data: ' comment ' },
+    { type: 'COMMENT', data: { text: ' comment ' } },
     { type: 'OPEN_TAG_START', data: { tag: 'h1' } },
     { type: 'OPEN_TAG_END' },
-    { type: 'ENTITY', data: 'nbsp' },
-    { type: 'ENTITY', data: 'nbsp' },
+    { type: 'ENTITY', data: { text: 'nbsp' } },
+    { type: 'ENTITY', data: { text: 'nbsp' } },
     { type: 'CLOSE_TAG', data: { tag: 'h1' } },
     { type: 'OPEN_TAG_START', data: { tag: 'script' } },
     { type: 'ATTRIBUTE_NAME', data: { name: 'src' } },
     { type: 'ATTRIBUTE_VALUE_START' },
-    { type: 'TEXT', data: '/index.js' },
+    { type: 'TEXT', data: { text: '/index.js' } },
     { type: 'ATTRIBUTE_VALUE_END' },
     { type: 'OPEN_TAG_END' },
     { type: 'CLOSE_TAG', data: { tag: 'script' } },

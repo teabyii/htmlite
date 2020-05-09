@@ -37,9 +37,9 @@ enum State {
   Processing
 }
 
-interface Token {
+export interface Token {
   type: Type;
-  data?: Record<string, any> | string;
+  data?: Record<string, string>;
 }
 
 function isLetter(t: string) {
@@ -53,7 +53,7 @@ function isWhiteSpace(t: string) {
   return t === ' ' || t === '\n' || t === '\t' || t === '\f' || t === '\r';
 }
 
-export default class Tokenizer {
+export class Tokenizer {
   // 状态机
   private state = State.Data;
   private returnState = State.Data;
@@ -156,7 +156,7 @@ export default class Tokenizer {
     }
   }
 
-  private addToken(type: Type, data?: any) {
+  private addToken(type: Type, data?: Record<string, string>) {
     const token: Token = { type };
     if (data !== undefined) token.data = data;
     this.token.push(token);
@@ -172,13 +172,13 @@ export default class Tokenizer {
     if (cur === '<') {
       this.state = State.TagOpen;
       if (this.start !== -1) {
-        this.addToken(Type.TEXT, this.getSection());
+        this.addToken(Type.TEXT, { text: this.getSection() });
       }
     } else if (cur === '&') {
       this.state = State.CharacterReference;
       this.returnState = State.Data;
       if (this.start !== -1) {
-        this.addToken(Type.TEXT, this.getSection());
+        this.addToken(Type.TEXT, { text: this.getSection() });
       }
     } else {
       if (this.start === -1) this.start = this.pos;
@@ -307,10 +307,10 @@ export default class Tokenizer {
   private onAttributeValueSingleQuoted() {
     const { cur, pos } = this;
     if (cur === "'") {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.state = State.AfterAttributeValueQuoted;
     } else if (cur === '&') {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.state = State.CharacterReference;
       this.returnState = State.AttributeValueSingleQuoted;
     } else {
@@ -320,10 +320,10 @@ export default class Tokenizer {
   private onAttributeValueDoubleQuoted() {
     const { cur, pos } = this;
     if (cur === '"') {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.state = State.AfterAttributeValueQuoted;
     } else if (cur === '&') {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.state = State.CharacterReference;
       this.returnState = State.AttributeValueDoubleQuoted;
     } else {
@@ -334,15 +334,15 @@ export default class Tokenizer {
   private onAttributeValueUnquoted() {
     const { cur, pos } = this;
     if (isWhiteSpace(cur)) {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.addToken(Type.ATTRIBUTE_VALUE_END);
       this.state = State.BeforeAttributeName;
     } else if (cur === '&') {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.state = State.CharacterReference;
       this.returnState = State.AttributeValueUnquoted;
     } else if (cur === '>') {
-      this.addToken(Type.TEXT, this.getSection());
+      this.addToken(Type.TEXT, { text: this.getSection() });
       this.addToken(Type.ATTRIBUTE_VALUE_END);
       this.pos -= 1;
       this.state = State.EndTagOpen;
@@ -396,7 +396,7 @@ export default class Tokenizer {
     } else if (cur === ';') {
       this.state = this.returnState;
       if (pos - this.start > 1) {
-        this.addToken(Type.ENTITY, this.getSection());
+        this.addToken(Type.ENTITY, { text: this.getSection() });
       } else {
         this.start = pos - 1;
       }
@@ -425,7 +425,7 @@ export default class Tokenizer {
   private onComment() {
     const { pos } = this;
     if (this.source.substring(pos, pos + 3) === '-->') {
-      this.addToken(Type.COMMENT, this.getSection());
+      this.addToken(Type.COMMENT, { text: this.getSection() });
       this.pos += 2;
       this.state = State.Data;
     } else {
@@ -436,7 +436,7 @@ export default class Tokenizer {
   private onCDATASection() {
     const { pos } = this;
     if (this.source.substring(pos, pos + 3) === ']]>') {
-      this.addToken(Type.CDATA, this.getSection());
+      this.addToken(Type.CDATA, { text: this.getSection() });
       this.pos += 2;
       this.state = State.Data;
     } else {
@@ -447,7 +447,7 @@ export default class Tokenizer {
   private onDoctype() {
     const { cur, pos } = this;
     if (cur === '>') {
-      this.addToken(Type.DOCTYPE, this.getSection());
+      this.addToken(Type.DOCTYPE, { text: this.getSection() });
       this.start = -1;
       this.state = State.Data;
     } else {

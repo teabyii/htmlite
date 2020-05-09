@@ -22,7 +22,7 @@ const tokens = tokenizer.tokenize('<h1>hello htmlite</h1>');
 // [
 //   { type: 'OPEN_TAG_START', data: { tag: 'h1' } },
 //   { type: 'OPEN_TAG_END' },
-//   { type: 'TEXT', data: 'hello htmlite' },
+//   { type: 'TEXT', data: { text: 'hello htmlite' } },
 //   { type: 'CLOSE_TAG', data: { tag: 'h1' } },
 // ]
 ```
@@ -53,7 +53,7 @@ const tree = new Tree(tokens);
 // {
 //   type: 'ELEMENT',
 //   tag: 'h1',
-//   children: ['hello htmlite'],
+//   children: 'hello htmlite',
 // }
 ```
 
