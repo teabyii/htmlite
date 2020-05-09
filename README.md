@@ -7,6 +7,10 @@
 
 :blush::blush::blush: A quick & tiny library to parse HTML string to JS Object Tree.
 
+:bowtie::bowtie::bowtie: The tokenizer follows partial [HTML 5.2 standard](https://www.w3.org/TR/2017/REC-html52-20171214/syntax.html#tokenization), ignores some complex but less used rules & XML support, for better performance.
+
+> I will use this module to parse html from rich editor in client JS runtime, like React Native. However, you also can use it in Server JS runtime, like Node or Deno.
+
 ## Tokenizer
 
 ```js
@@ -49,19 +53,20 @@ const tree = new Tree(tokens);
 // {
 //   type: 'ELEMENT',
 //   tag: 'h1',
-//   children: 'hello htmlite'
-//   attrs: {}
+//   children: ['hello htmlite'],
 // }
 ```
 
 ### Node Types
 
+- DOCTYPE
 - ELEMENT
 - CDATA
 - COMMENT
+- ENTITY
 - TEXT (just a string)
 
-## Development
+## Test
 
 First, clone repo and use `yarn` to install deps for testing.
 

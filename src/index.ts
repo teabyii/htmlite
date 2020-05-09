@@ -1,2 +1,2 @@
-export { default as Tokenizer } from './tokenizer';
-export { default as Tree } from './tree';
+export * from './tokenizer';
+export * from './tree';
