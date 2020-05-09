@@ -1,3 +1,2 @@
-export default function parse(html: string) {
-  console.log(html);
-}
+export { default as Tokenizer } from './tokenizer';
+export { default as Tree } from './tree';
